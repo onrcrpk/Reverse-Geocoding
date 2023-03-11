@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Leaflet Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #mapid {
+      height: 70vh;
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+    integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+</head>
+
+<body>
+  <div id="mapid"></div>
+
+  <script>
+
+
+    const map = L.map('mapid').setView([51.505, -0.09], 3);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const infoBox = document.createElement('div');
+    infoBox.className = 'info-box';
+    document.getElementById('mapid').after(infoBox);
+
+    let marker;
+
+    map.on('click', async function (e) {
+      const lat = e.latlng.lat;
+      const lon = e.latlng.lng;
+
+      // Make a request to the OSM Nominatim API to get the address information
+      const nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const nominatimData = await nominatimResponse.json();
+
+      const country = nominatimData.address.country || '';
+      const city = nominatimData.address.province || nominatimData.address.city || nominatimData.address.town || nominatimData.address.municipality || '';
+      const street = nominatimData.address.road || '';
+      const postalCode = nominatimData.address.postcode || '';
+      const fullAddress = nominatimData.display_name || '';
+
+      // Build the HTML content for the info box
+      const infoBoxContent = `
+          <div><strong>Country:</strong> ${country}</div>
+          <div><strong>City:</strong> ${city}</div>
+          <div><strong>Postal Code:</strong> ${postalCode}</div>
+          <div><strong>Full Address:</strong> ${fullAddress}</div>
+        `;
+      infoBox.innerHTML = infoBoxContent;
+
+      // Remove previous marker, if any
+      if (marker) {
+        map.removeLayer(marker);
+      }
+
+      // Create new marker and add to map
+      marker = L.marker(e.latlng).addTo(map);
+
+      // Make a request to the GeoNames API to get nearby places
+      const geoNamesResponse = await fetch(`http://api.geonames.org/findNearbyJSON?lat=${lat}&lng=${lon}&username=onrcrpk`);
+      const geoNamesData = await geoNamesResponse.json();
+
+      // Display nearby places from GeoNames API
+      if (geoNamesData.geonames.length > 0) {
+        const geoNamesPlaces = geoNamesData.geonames.map(place => `${place.name}`);
+        const geoNamesPlacesElem = document.createElement('div');
+        geoNamesPlacesElem.innerHTML = `<strong>GeoNames API nearby places:</strong> ${geoNamesPlaces.join(', ')}`;
+        infoBox.appendChild(geoNamesPlacesElem);
+      }
+      // Make a request to the GeoNames API to get elevation data
+      const elevationResponse = await fetch(`http://api.geonames.org/srtm1JSON?lat=${lat}&lng=${lon}&username=onrcrpk`);
+      const elevationData = await elevationResponse.json();
+
+      // Display elevation data from GeoNames API
+      if (elevationData && elevationData.srtm1) {
+        const elevation = elevationData.srtm1;
+        const elevationElem = document.createElement('div');
+        elevationElem.innerHTML = `<strong>Elevation:</strong> ${elevation} meters`;
+        infoBox.appendChild(elevationElem);
+      } else {
+        const elevationErrorElem = document.createElement('div');
+        elevationErrorElem.innerHTML = `<strong>Elevation:</strong> Unknown`;
+        infoBox.appendChild(elevationErrorElem);
+      }
+
+
+    });
+
+
+
+
+  </script>
+</body>
+
+</html>
