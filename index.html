@@ -130,6 +130,19 @@
       marker = L.marker(e.latlng, { icon: customIcon }).addTo(map);
 
 
+
+      // Make a request to the GeoNames API to get nearby places
+      const geoNamesResponse = await fetch(`http://api.geonames.org/findNearbyJSON?lat=${e.latlng.lat}&lng=${e.latlng.lng}&username=onrcrpk`);
+      const geoNamesData = await geoNamesResponse.json();
+
+      // Display nearby places from GeoNames API
+      if (geoNamesData.geonames.length > 0) {
+        const geoNamesPlaces = geoNamesData.geonames.map(place => `${place.name}`);
+        const geoNamesPlacesElem = document.createElement('div');
+        geoNamesPlacesElem.innerHTML = `<strong>GeoNames API nearby places:</strong> ${geoNamesPlaces.join(', ')}`;
+        infoBox.appendChild(geoNamesPlacesElem);
+      }
+
       // Make a request to the GeoNames API to get elevation data
       const elevationResponse = await fetch(`http://api.geonames.org/srtm1JSON?lat=${e.latlng.lat}&lng=${e.latlng.lng}&username=onrcrpk`);
       const elevationData = await elevationResponse.json();
